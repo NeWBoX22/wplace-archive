@@ -1,0 +1,73 @@
+name: Daily Area Photo
+
+# Roda todo dia às 03:00 UTC (ajuste o cron se quiser outro horário)
+# e pode ser disparado manualmente na aba Actions.
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+env:
+  # --- EDITE AQUI a área que você quer capturar ---
+  START_X: "3745"      # tile x inicial (zoom 11)
+  START_Y: "1406"       # tile y inicial (zoom 11)
+  WIDTH: "624"            # tiles de largura
+  HEIGHT: "467"           # tiles de altura
+  RPS: "2"              # requests por segundo
+  CONCURRENCY: "2"      # requests simultâneos
+
+jobs:
+  photo:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Define data de hoje
+        id: vars
+        run: echo "date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Baixar tiles da área (pasta temporária)
+        run: |
+          bun run archive:world -- \
+            --start-x=${{ env.START_X }} \
+            --start-y=${{ env.START_Y }} \
+            --width=${{ env.WIDTH }} \
+            --height=${{ env.HEIGHT }} \
+            --out=/tmp/wplace-tiles \
+            --clean=true \
+            --rps=${{ env.RPS }} \
+            --concurrency=${{ env.CONCURRENCY }}
+
+      - name: Juntar tiles em uma única foto
+        run: |
+          node scripts/stitch-snapshot.mjs \
+            /tmp/wplace-tiles \
+            ${{ env.START_X }} \
+            ${{ env.START_Y }} \
+            ${{ env.WIDTH }} \
+            ${{ env.HEIGHT }} \
+            photos/${{ steps.vars.outputs.date }}.png
+
+      - name: Limpar tiles temporários
+        run: rm -rf /tmp/wplace-tiles
+
+      - name: Comitar a foto do dia
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "photo: ${{ steps.vars.outputs.date }}"
+          file_pattern: "photos/**"
+
+      # Opcional: mandar a foto direto pro Discord via webhook
+      # - name: Enviar pro Discord
+      #   run: |
+      #     curl -F "file=@photos/${{ steps.vars.outputs.date }}.png" \
+      #       "${{ secrets.DISCORD_WEBHOOK_URL }}"
