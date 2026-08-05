@@ -9,10 +9,10 @@ on:
 
 env:
   # --- EDITE AQUI a área que você quer capturar ---
-  START_X: "2"      # tile x inicial (zoom 11)
-  START_Y: "0"       # tile y inicial (zoom 11)
-  WIDTH: "4"            # tiles de largura
-  HEIGHT: "3"           # tiles de altura
+  START_X: "1827"      # tile x inicial (zoom 11)
+  START_Y: "829"       # tile y inicial (zoom 11)
+  WIDTH: "2"            # tiles de largura
+  HEIGHT: "1"           # tiles de altura
   RPS: "2"              # requests por segundo
   CONCURRENCY: "2"      # requests simultâneos
 
